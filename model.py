@@ -12,6 +12,7 @@ import prepare_data
 
 prepare_data.prepre_resize_train()      ## Create Train Data
 prepare_data.prepare_resize_test()      ## Create Train Data
+prepare_data.prepare_csv()
 
 
 ### Hyper parameter
@@ -30,7 +31,8 @@ POOLING_SIZE = 2
 
 
 # input your path
-csv_file =  tf.train.string_input_producer(['../data/train_label.csv'], name='filename_queue', shuffle=True)       
+csv_file =  tf.train.string_input_producer([prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH], name='filename_queue', shuffle=True)       
+print prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH 
 csv_reader = tf.TextLineReader()
 _,line = csv_reader.read(csv_file)
 
@@ -106,8 +108,8 @@ L6 = tf.reshape(L6, [-1, 1*1*1024])
 print "reshape for fully: ", L6
 
 
-flat_W1 = tf.get_variable("flat_W", shape=[1*1*1024, 2], initializer=tf.contrib.layers.xavier_initializer())
-b1 = tf.Variable(tf.random_normal([2]))
+flat_W1 = tf.get_variable("flat_W", shape=[1*1*1024, NUM_CLASSES], initializer=tf.contrib.layers.xavier_initializer())
+b1 = tf.Variable(tf.random_normal([NUM_CLASSES]))
 logits = tf.matmul(L6, flat_W1) + b1
 
 
