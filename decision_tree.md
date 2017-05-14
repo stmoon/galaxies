@@ -1,7 +1,7 @@
 
 # Decision Tree & Data 
 
-![decision tree](galaxies/decision tree.png)
+! [decision tree] (galaxies/decision tree.png)
 
 ## 1. Decision Tree
 galaxy를 분류하기 위한 의사 결정과정으로 zooniverse의 일반인을 대상으로 하여 작성.총 11가지의 질문이 있으며,**Q1& Q6은 모든 input이 거치게 되는 질문**이 됨. 이중 **Q1는 가장 첫 질문이 되며,Q6은 이미 분류과정을 거친 이후에 최종적으로 odd(이상현상여부)을 판별**하기 위함
@@ -23,7 +23,7 @@ A101+...+A103=A41
 A111+...+A116=A41
 A51+...+A54=**A22**
 
-- 가장 하위 단계의 **leap node**는 **Q7[A71..A73]**,**Q9[A91..A93]**,**Q5[A51..A54]**의 answer들과 **A13**이 됨
+- 가장 하위 단계의 **leap node**는 **Q7[A71..A73]**,**Q9[A91..A93],Q5[A51..A54]**의 answer와 **A13**이 됨
 [A11=A71+....+A73]+{A12= [A21=A91+...+A93]+[A22=A51+...+A54]} +A13 =1
 
 
