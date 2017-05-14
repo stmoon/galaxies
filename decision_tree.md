@@ -1,7 +1,7 @@
 
 # Decision Tree & Data 
 
-![decision tree](./decision tree.png)
+![decision tree](galaxies/decision tree.png)
 
 ## 1. Decision Tree
 galaxy를 분류하기 위한 의사 결정과정으로 zooniverse의 일반인을 대상으로 하여 작성.총 11가지의 질문이 있으며,**Q1& Q6은 모든 input이 거치게 되는 질문**이 됨. 이중 **Q1는 가장 첫 질문이 되며,Q6은 이미 분류과정을 거친 이후에 최종적으로 odd(이상현상여부)을 판별**하기 위함
