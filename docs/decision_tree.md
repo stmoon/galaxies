@@ -35,3 +35,6 @@ A51+...+A54=A22
 ```
 
 
+## Reference
+- [The Galaxy Zoo Decision Tree](https://www.kaggle.com/c/galaxy-zoo-the-galaxy-challenge/details/the-galaxy-zoo-decision-tree)
+-  [Galaxy Zoo 2: detailed morphological classifications for 304,122 galaxies from the Sloan Digital Sky Survey](https://arxiv.org/pdf/1308.3496.pdf)
