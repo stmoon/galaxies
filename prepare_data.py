@@ -58,16 +58,15 @@ def prepare_resize_test():
 
 def prepare_csv():
 
-    #writefile = open(MODIFIED_TRAIN_LABEL_CSV_PATH, 'wb')
-    #writer = csv.writer(writefile, delimiter=',')
-    
-    
     with open(TRAIN_LABEL_CSV_PATH) as csvfile, open(MODIFIED_TRAIN_LABEL_CSV_PATH, 'wb') as writefile:    
         
         reader = csv.reader(csvfile, delimiter=',')    
-	writer = csv.writer(writefile, delimiter=',')
+	    writer = csv.writer(writefile, delimiter=',')
 
-	next(reader, None)
+	    next(reader, None)  
 
         for row in tqdm(reader):                        
-            writer.writerow([RESIZE_TRAIN_DATA_PATH + '/' + row[0] + '.jpg', np.argmax(row[1:])])
+            file_path = [RESIZE_TRAIN_DATA_PATH + '/' + row[0] + '.jpg'
+            # FIXME: add leaf node 
+            writer.writerow(file_path, np.argmax(row[1:])])
+

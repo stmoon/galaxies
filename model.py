@@ -48,7 +48,7 @@ image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_
 
 X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 1])
 Y = tf.placeholder(tf.int32, [BATCH_SIZE, 1])
-Y_one_hot = tf.one_hot(Y, NUM_CLASSES)
+Y_one_hot = tf.one_hot(Y, NUM_CLASSES)      # FIXME: remove it (in order to use original probability)
 Y_one_hot = tf.reshape(Y_one_hot, [-1, NUM_CLASSES])
 
 
@@ -124,7 +124,7 @@ print "=========================================================================
 
 
 
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y_one_hot))
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y_one_hot)) # FIXME: change the label name
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(cost)
 
 
