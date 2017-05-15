@@ -13,4 +13,7 @@
  - rotation invariant 향상 
  - classification -> object detection
  - data quality 향상 위해 intensity level을 radial 방향으로 확인하여 대상 은하만을 중심으로 data 추출하여 재구성
-   (문제점 : 중심 은하 size가 각기 달라서 data 마다 크기가 달라짐)
+   (문제점 : 중심 은하 size가 각기 달라서 data 마다 크기가 달라짐-> resize )
+![original_image](./image_ori.png)
+![cropped_image](./image_crop.png)
+![intensity by radius](./radial_inten.png)
