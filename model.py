@@ -25,31 +25,36 @@ BATCH_SIZE = 50
 NUM_THREADS = 4
 CAPACITY = 5000
 MIN_AFTER_DEQUEUE = 100
-NUM_CLASSES = 37
+NUM_CLASSES = 11
 FILTER_SIZE = 2
 POOLING_SIZE = 2
 
 
 # input your path
 csv_file =  tf.train.string_input_producer([prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH], name='filename_queue', shuffle=True)       
-print prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH 
 csv_reader = tf.TextLineReader()
 _,line = csv_reader.read(csv_file)
 
-imagefile,label_decoded = tf.decode_csv(line,record_defaults=[[""],[""]])
+record_defaults = [[""], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.]] 
+
+imagefile,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11 = tf.decode_csv(line,record_defaults=record_defaults)
+label_decoded = tf.pack([a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11])
+#imagefile,label_decoded = tf.decode_csv(line,record_defaults=record_defaults)
 image_decoded = tf.image.decode_jpeg(tf.read_file(imagefile),channels=1)
 
 image_cast = tf.cast(image_decoded, tf.float32)
 image = tf.reshape(image_cast, [IMAGE_WIDTH, IMAGE_HEIGHT, 1])
+
 
 # similary tf.placeholder
 # Training batch set
 image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
 
 X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 1])
-Y = tf.placeholder(tf.int32, [BATCH_SIZE, 1])
-Y_one_hot = tf.one_hot(Y, NUM_CLASSES)      # FIXME: remove it (in order to use original probability)
-Y_one_hot = tf.reshape(Y_one_hot, [-1, NUM_CLASSES])
+Y = tf.placeholder(tf.int32, [BATCH_SIZE, NUM_CLASSES])
+#Y_one_hot = tf.one_hot(Y, NUM_CLASSES)      # FIXME: remove it (in order to use original probability)
+#Y_one_hot = tf.reshape(Y_one_hot, [-1, NUM_CLASSES])
+Y_one_hot = tf.reshape(Y, [BATCH_SIZE, NUM_CLASSES])
 
 
 
@@ -156,7 +161,7 @@ with tf.Session() as sess:
         for i in range(total_batch):
             batch_x, batch_y = sess.run([image_batch, label_batch])
             
-            batch_y = batch_y.reshape(BATCH_SIZE, 1)
+            batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
             
             cost_value, _ = sess.run([cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
             avg_cost += cost_value / total_batch
@@ -174,9 +179,9 @@ with tf.Session() as sess:
     # 50 images test
     test_batch = []
     file_list = []
-    for test_file in os.listdir('../data/resized_train')[:50]:
+    for test_file in os.listdir('./data/resized_train')[:50]:
         file_list.append(test_file)
-        img = cv2.imread('../data/resized_train/'+test_file, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread('./data/resized_train/'+test_file, cv2.IMREAD_GRAYSCALE)
         test_batch.append(img)
 
     input_batch = np.array(test_batch)
