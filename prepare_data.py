@@ -10,14 +10,14 @@ from tqdm import tqdm
 import csv
 import numpy as np
 
-ORIGIN_TRAIN_DATA_PATH = '../data/images_training_rev1'
-ORIGIN_TEST_DATA_PATH = '../data/images_test_rev1'
+ORIGIN_TRAIN_DATA_PATH = './data/images_training_rev1'
+ORIGIN_TEST_DATA_PATH = './data/images_test_rev1'
 
-RESIZE_TRAIN_DATA_PATH = '../data/resized_train'
-RESIZE_TEST_DATA_PATH = '../data/resized_test'
+RESIZE_TRAIN_DATA_PATH = './data/resized_train'
+RESIZE_TEST_DATA_PATH = './data/resized_test'
 
-TRAIN_LABEL_CSV_PATH = '../data/training_solutions_rev1.csv'
-MODIFIED_TRAIN_LABEL_CSV_PATH = '../data/modified_training_solutions.csv'
+TRAIN_LABEL_CSV_PATH = './data/training_solutions_rev1.csv'
+MODIFIED_TRAIN_LABEL_CSV_PATH = './data/modified_training_solutions.csv'
 
 
 
@@ -61,12 +61,12 @@ def prepare_csv():
     with open(TRAIN_LABEL_CSV_PATH) as csvfile, open(MODIFIED_TRAIN_LABEL_CSV_PATH, 'wb') as writefile:    
         
         reader = csv.reader(csvfile, delimiter=',')    
-	    writer = csv.writer(writefile, delimiter=',')
+	writer = csv.writer(writefile, delimiter=',')
 
-	    next(reader, None)  
+	next(reader, None)  
 
         for row in tqdm(reader):                        
-            file_path = [RESIZE_TRAIN_DATA_PATH + '/' + row[0] + '.jpg'
+            file_path = RESIZE_TRAIN_DATA_PATH + '/' + row[0] + '.jpg'
             # FIXME: add leaf node 
-            writer.writerow(file_path, np.argmax(row[1:])])
+            writer.writerow([file_path, np.argmax(row[1:])])
 
