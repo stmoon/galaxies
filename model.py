@@ -51,10 +51,7 @@ image = tf.reshape(image_cast, [IMAGE_WIDTH, IMAGE_HEIGHT, 1])
 image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
 
 X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 1])
-Y = tf.placeholder(tf.int32, [BATCH_SIZE, NUM_CLASSES])
-#Y_one_hot = tf.one_hot(Y, NUM_CLASSES)      # FIXME: remove it (in order to use original probability)
-#Y_one_hot = tf.reshape(Y_one_hot, [-1, NUM_CLASSES])
-Y_one_hot = tf.reshape(Y, [BATCH_SIZE, NUM_CLASSES])
+Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES])
 
 
 
@@ -124,12 +121,12 @@ saver = tf.train.Saver(param_list)
 
 print "========================================================================================="
 print "logits: ", logits
-print "Y one hot: ", Y_one_hot
+print "Y: ", Y
 print "========================================================================================="
 
 
 
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y_one_hot)) # FIXME: change the label name
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)) # FIXME: change the label name
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(cost)
 
 
@@ -165,6 +162,7 @@ with tf.Session() as sess:
             
             cost_value, _ = sess.run([cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
             avg_cost += cost_value / total_batch
+	    print avg_cost
 
             saver.save(sess, 'model.ckpt', global_step=100)
 
