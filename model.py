@@ -20,12 +20,12 @@ IMAGE_WIDTH = 64
 IMAGE_HEIGHT = 64
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
-TRAIN_EPOCH = 10
+TRAIN_EPOCH = 100
 BATCH_SIZE = 50
 NUM_THREADS = 4
 CAPACITY = 5000
 MIN_AFTER_DEQUEUE = 100
-NUM_CLASSES = 11
+NUM_CLASSES = 37
 FILTER_SIZE = 2
 POOLING_SIZE = 2
 
@@ -35,10 +35,15 @@ csv_file =  tf.train.string_input_producer([prepare_data.MODIFIED_TRAIN_LABEL_CS
 csv_reader = tf.TextLineReader()
 _,line = csv_reader.read(csv_file)
 
-record_defaults = [[""], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.]] 
+record_defaults = [[""], 
+		   [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], 
+		   [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], 
+		   [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], [1.], 
+		   [1.], [1.], [1.], [1.], [1.], [1.], [1.]] 
 
-imagefile,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11 = tf.decode_csv(line,record_defaults=record_defaults)
-label_decoded = tf.pack([a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11])
+imagefile, a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, a11,a12,a13,a14,a15,a16,a17,a18,a19,a20, a21,a22,a23,a24,a25,a26,a27,a28,a29,a30, a31,a32,a33,a34,a35,a36,a37 = tf.decode_csv(line,record_defaults=record_defaults)
+
+label_decoded = tf.pack([a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, a11,a12,a13,a14,a15,a16,a17,a18,a19,a20, a21,a22,a23,a24,a25,a26,a27,a28,a29,a30, a31,a32,a33,a34,a35,a36,a37])
 #imagefile,label_decoded = tf.decode_csv(line,record_defaults=record_defaults)
 image_decoded = tf.image.decode_jpeg(tf.read_file(imagefile),channels=1)
 
@@ -162,7 +167,6 @@ with tf.Session() as sess:
             
             cost_value, _ = sess.run([cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
             avg_cost += cost_value / total_batch
-	    print avg_cost
 
             saver.save(sess, 'model.ckpt', global_step=100)
 
@@ -177,9 +181,10 @@ with tf.Session() as sess:
     # 50 images test
     test_batch = []
     file_list = []
-    for test_file in os.listdir('./data/resized_train')[:50]:
+    test_path = prepare_data.RESIZE_TRAIN_DATA_PATH
+    for test_file in os.listdir(test_path)[:50]:
         file_list.append(test_file)
-        img = cv2.imread('./data/resized_train/'+test_file, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(test_path+test_file, cv2.IMREAD_GRAYSCALE)
         test_batch.append(img)
 
     input_batch = np.array(test_batch)

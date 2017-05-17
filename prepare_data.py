@@ -51,7 +51,7 @@ def prepare_resize_test():
             # NOTE: its img[y: y + h, x: x + w] and *not* img[x: x + w, y: y + h]
 
             img = cv2.resize(crop_img, (64, 64))
-            cv2.imwrite(RESIZE_TRAIN_DATA_PATH+'/'+data, img)
+            cv2.imwrite(RESIZE_TEST_DATA_PATH+'/'+data, img)
 
 
 
@@ -69,6 +69,8 @@ def prepare_csv():
             file_path = RESIZE_TRAIN_DATA_PATH + '/' + row[0] + '.jpg'
             # FIXME: add leaf node 
 	    #  4,11,12,13,14,17,18,19,27,28,29
-            writer.writerow([file_path, row[3], row[10], row[11], row[12], row[13], row[16], row[17], row[18], row[26], row[27], row[28]])
+            #writer.writerow([file_path, row[3], row[10], row[11], row[12], row[13], row[16], row[17], row[18], row[26], row[27], row[28]])
+	    row[0] = file_path
+            writer.writerow(row)
 
 
