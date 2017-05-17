@@ -1,2 +1,4 @@
 # galaxies
-classification for galaxies
+
+classification based on CNN for galaxies
+
