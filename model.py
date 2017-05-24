@@ -131,8 +131,8 @@ print "=========================================================================
 
 
 
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)) # FIXME: change the label name
-optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(cost)
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
+optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
 
 
 with tf.Session() as sess:
