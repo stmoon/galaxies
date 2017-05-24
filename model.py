@@ -20,12 +20,12 @@ IMAGE_WIDTH = 64
 IMAGE_HEIGHT = 64
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
-TRAIN_EPOCH = 100
+TRAIN_EPOCH = 10
 BATCH_SIZE = 50
 NUM_THREADS = 4
 CAPACITY = 5000
 MIN_AFTER_DEQUEUE = 100
-NUM_CLASSES = 37
+NUM_CLASSES = 3
 FILTER_SIZE = 2
 POOLING_SIZE = 2
 
@@ -43,7 +43,7 @@ record_defaults = [[""],
 
 imagefile, a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, a11,a12,a13,a14,a15,a16,a17,a18,a19,a20, a21,a22,a23,a24,a25,a26,a27,a28,a29,a30, a31,a32,a33,a34,a35,a36,a37 = tf.decode_csv(line,record_defaults=record_defaults)
 
-label_decoded = tf.pack([a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, a11,a12,a13,a14,a15,a16,a17,a18,a19,a20, a21,a22,a23,a24,a25,a26,a27,a28,a29,a30, a31,a32,a33,a34,a35,a36,a37])
+label_decoded = tf.pack([a1,a2,a3])
 #imagefile,label_decoded = tf.decode_csv(line,record_defaults=record_defaults)
 image_decoded = tf.image.decode_jpeg(tf.read_file(imagefile),channels=1)
 
