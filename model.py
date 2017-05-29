@@ -1,6 +1,5 @@
 """
-Data download : https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/data
- => Download 'test.zip' and 'train.zip'
+made by STMOON
 """
 
 import tensorflow as tf
@@ -46,7 +45,6 @@ record_defaults = [[""],
 imagefile, a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, a11,a12,a13,a14,a15,a16,a17,a18,a19,a20, a21,a22,a23,a24,a25,a26,a27,a28,a29,a30, a31,a32,a33,a34,a35,a36,a37 = tf.decode_csv(line,record_defaults=record_defaults)
 
 label_decoded = tf.pack([a1,a2,a3])
-#imagefile,label_decoded = tf.decode_csv(line,record_defaults=record_defaults)
 image_decoded = tf.image.decode_jpeg(tf.read_file(imagefile),channels=3)
 
 image_cast = tf.cast(image_decoded, tf.float32)
@@ -59,8 +57,6 @@ image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_
 
 X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES])
-
-
 
 ### Graph part
 print "original: ", X
@@ -127,6 +123,7 @@ L7 = tf.nn.conv2d(L6, filter7, strides=[1, 1, 1, 1], padding='SAME')
 # print L7
 L7 = tf.nn.relu(L7)
 L7 = tf.nn.max_pool(L7, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
+
 print "after 7-layer: ", L7
 
 
@@ -139,12 +136,7 @@ print "reshape for fully: ", L7
 
 flat_W1 = tf.get_variable("flat_W", shape=[1*1*2048, NUM_CLASSES], initializer=tf.contrib.layers.xavier_initializer())
 b1 = tf.Variable(tf.random_normal([NUM_CLASSES]))
-logits = tf.matmul(L6, flat_W1) + b1
-#logits1 = tf.nn.relu(logits)
-#logits_sum =  tf.expand_dims(tf.reduce_sum(logits1,1), 1)
-#logits_sum = tf.add(logits_sum, 1e-12)
-#logits = tf.div(logits1, logits_sum)
-
+logits = tf.matmul(L7, flat_W1) + b1
 
 param_list = [filter1, filter2, filter3, filter4, filter5, filter6, filter7, flat_W1, b1]
 saver = tf.train.Saver(param_list)
@@ -167,28 +159,11 @@ with tf.Session() as sess:
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     sess.run(tf.global_variables_initializer())
  
-
-    # check image
-    '''
-    for i in range(100):
-
-         image_value, label_value, imagefile_value = sess.run([image_batch, label_batch, imagefile])
-         print image_value.shape
-         image_value = image_value.reshape(IMAGE_WIDTH, IMAGE_HEIGHT)
-
-         plt.imshow(image_value)
-         plt.title(label_value+":"+imagefile_value)
-         plt.show()
-    '''
-
-
-
     for epoch in range(TRAIN_EPOCH):
         avg_cost = 0
-       # accuracy = 0
         total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
 
-	## TRAINING
+	    ## TRAINING
         for i in range(total_batch):
             batch_x, batch_y = sess.run([image_batch, label_batch])
             
@@ -230,26 +205,8 @@ with tf.Session() as sess:
 	s = np.expand_dims(np.sum(pred1,1)+1e-12,1)
 	pred1 = pred1 / s
 
-	#pred1 = sess.run(logits1, feed_dict={X: input_batch})
-	#pred2 = sess.run(logits2, feed_dict={X: input_batch})
-	#pred3 = sess.run(logits_sum, feed_dict={X: input_batch})
-
 	accuracy =  np.average(np.sqrt(np.sum((pred1-y_batch)**2, axis=1)))
-
-	#print pred[:5]
-	#print '=========='
-	#print pred1[:5]
-	#print '----------'
-	#print pred2[:10]
-	#print '---------'
-	#print pred3[:10]
-	#print '---------'
-	#print y_batch[:5]
-	#print '++++++++++'
-
 	print('Accuracy : ' ,  accuracy)
-
-
     print('Learning Finished!')
 
     correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
