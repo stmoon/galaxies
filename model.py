@@ -194,7 +194,7 @@ with tf.Session() as sess:
 		break;
 
 	input_batch = np.array(test_batch)
-	input_batch = input_batch.reshape(50, 64, 64, 3)
+	input_batch = input_batch.reshape(50, IMAGE_WIDTH, IMAGE_HEIGHT, 3)
 	y_batch = np.array(test_y)
 	y_batch = y_batch.reshape(50,3)
 
