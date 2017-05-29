@@ -1,5 +1,5 @@
 """
-made by STMOON
+made by STMOON and YJCHOI
 """
 
 import tensorflow as tf
@@ -22,7 +22,7 @@ KEEP_PROB = 0.7
 LEARNING_RATE = 1e-4
 TRAIN_EPOCH =100
 BATCH_SIZE = 50
-NUM_TOTAL_TRAINING_DATA = 61578
+NUM_TOTAL_TRAINING_DATA = 1000 #61578
 NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
@@ -55,8 +55,8 @@ image = tf.reshape(image_cast, [IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 # Training batch set
 image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
 
-X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3])
-Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES])
+X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='X')
+Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES], name='Y')
 
 ### Graph part
 print "original: ", X
@@ -135,8 +135,12 @@ print "reshape for fully: ", L7
 
 
 flat_W1 = tf.get_variable("flat_W", shape=[1*1*2048, NUM_CLASSES], initializer=tf.contrib.layers.xavier_initializer())
+w1_hist = tf.histogram_summary('W1', flat_W1)
 b1 = tf.Variable(tf.random_normal([NUM_CLASSES]))
+b1_hist = tf.histogram_summary('b1', b1)
 logits = tf.matmul(L7, flat_W1) + b1
+logits_hist = tf.histogram_summary('logit', logits)
+
 
 param_list = [filter1, filter2, filter3, filter4, filter5, filter6, filter7, flat_W1, b1]
 saver = tf.train.Saver(param_list)
@@ -150,8 +154,11 @@ print "=========================================================================
 
 
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
+cost_hist = tf.scalar_summary('cost', cost)
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
 
+merged = tf.merge_all_summaries()
+writer = tf.train.SummaryWriter('/tmp/logs')
 
 with tf.Session() as sess:
     
@@ -163,14 +170,16 @@ with tf.Session() as sess:
         avg_cost = 0
         total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
 
-	    ## TRAINING
+        ## TRAINING
         for i in range(total_batch):
             batch_x, batch_y = sess.run([image_batch, label_batch])
             
             batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
             
-            cost_value, _ = sess.run([cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
+            summ, cost_value, _ = sess.run([merged, cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
             avg_cost += cost_value / total_batch
+
+	writer.add_summary(summ,epoch)
 
         print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
 
@@ -223,7 +232,7 @@ with tf.Session() as sess:
         test_batch.append(img)
 
     input_batch = np.array(test_batch)
-    input_batch = input_batch.reshape(50, IMAGE_WIDTH, IMAGE_HEIGHT, 1)
+    input_batch = input_batch.reshape(50, IMAGE_WIDTH, IMAGE_HEIGHT, 3)
 
     pred = sess.run(tf.argmax(logits, 1), feed_dict={X: input_batch})
     print 'predict : ', pred
