@@ -34,7 +34,7 @@ def prepre_resize_train():
             crop_img = ori_img[108:108+207, 108:108+207]  # Crop from x, y, w, h -> 100, 200, 300, 400
             # NOTE: its img[y: y + h, x: x + w] and *not* img[x: x + w, y: y + h]
 
-            img = cv2.resize(crop_img, (64, 64))
+            img = cv2.resize(crop_img, (128, 128))
             cv2.imwrite(RESIZE_TRAIN_DATA_PATH+'/'+data, img)
 
 
@@ -50,7 +50,7 @@ def prepare_resize_test():
             crop_img = ori_img[108:108+207, 108:108+207]  # Crop from x, y, w, h -> 100, 200, 300, 400
             # NOTE: its img[y: y + h, x: x + w] and *not* img[x: x + w, y: y + h]
 
-            img = cv2.resize(crop_img, (64, 64))
+            img = cv2.resize(crop_img, (128, 128))
             cv2.imwrite(RESIZE_TEST_DATA_PATH+'/'+data, img)
 
 

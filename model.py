@@ -16,8 +16,8 @@ prepare_data.prepare_csv()
 
 
 ### Hyper parameter
-IMAGE_WIDTH = 64
-IMAGE_HEIGHT = 64
+IMAGE_WIDTH =  128
+IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
 TRAIN_EPOCH = 10
@@ -109,18 +109,27 @@ L6 = tf.nn.relu(L6)
 L6 = tf.nn.max_pool(L6, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
 print "after 6-layer: ", L6
 
+filter7 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 1024, 2048], stddev=0.01))
+L7 = tf.nn.conv2d(L6, filter7, strides=[1, 1, 1, 1], padding='SAME')
+# print L7
+L7 = tf.nn.relu(L7)
+L7 = tf.nn.max_pool(L7, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
+print "after 7-layer: ", L7
+
+
+
 print "========================================================================================="
 
-L6 = tf.reshape(L6, [-1, 1*1*1024])
-print "reshape for fully: ", L6
+L7 = tf.reshape(L7, [-1, 1*1*2048])
+print "reshape for fully: ", L7
 
 
-flat_W1 = tf.get_variable("flat_W", shape=[1*1*1024, NUM_CLASSES], initializer=tf.contrib.layers.xavier_initializer())
+flat_W1 = tf.get_variable("flat_W", shape=[1*1*2048, NUM_CLASSES], initializer=tf.contrib.layers.xavier_initializer())
 b1 = tf.Variable(tf.random_normal([NUM_CLASSES]))
-logits = tf.matmul(L6, flat_W1) + b1
+logits = tf.matmul(L7, flat_W1) + b1
 
 
-param_list = [filter1, filter2, filter3, filter4, filter5, filter6, flat_W1, b1]
+param_list = [filter1, filter2, filter3, filter4, filter5, filter6, filter7, flat_W1, b1]
 saver = tf.train.Saver(param_list)
 
 
@@ -188,7 +197,7 @@ with tf.Session() as sess:
         test_batch.append(img)
 
     input_batch = np.array(test_batch)
-    input_batch = input_batch.reshape(50, 64, 64, 1)
+    input_batch = input_batch.reshape(50, IMAGE_WIDTH, IMAGE_HEIGHT, 1)
 
     pred = sess.run(tf.argmax(logits, 1), feed_dict={X: input_batch})
     print 'predict : ', pred
