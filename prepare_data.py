@@ -30,7 +30,8 @@ def prepre_resize_train():
         os.mkdir(RESIZE_TRAIN_DATA_PATH)
 
         for data in tqdm(os.listdir(ORIGIN_TRAIN_DATA_PATH)):
-            ori_img = cv2.imread(ORIGIN_TRAIN_DATA_PATH+'/'+data, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+            #ori_img = cv2.imread(ORIGIN_TRAIN_DATA_PATH+'/'+data, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+            ori_img = cv2.imread(ORIGIN_TRAIN_DATA_PATH+'/'+data)
             crop_img = ori_img[108:108+207, 108:108+207]  # Crop from x, y, w, h -> 100, 200, 300, 400
             # NOTE: its img[y: y + h, x: x + w] and *not* img[x: x + w, y: y + h]
 
