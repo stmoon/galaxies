@@ -20,15 +20,39 @@ IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
-TRAIN_EPOCH =1000
-BATCH_SIZE = 50
-NUM_TOTAL_TRAINING_DATA = 61578
+TRAIN_EPOCH = 1000
+BATCH_SIZE = 2 #50
+NUM_TOTAL_TRAINING_DATA = 1000 #61578
 NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
 NUM_CLASSES = 3
 FILTER_SIZE = 2
 POOLING_SIZE = 2
+
+
+def conv_layer(input, size_in, size_out, name="conv"):
+  with tf.name_scope(name):
+    w = tf.Variable(tf.truncated_normal([FILTER_SIZE, FILTER_SIZE, size_in, size_out], stddev=0.1), name="W")
+    b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="B")
+    conv = tf.nn.conv2d(input, w, strides=[1, 1, 1, 1], padding="SAME")
+    act = tf.nn.relu(conv + b)
+    tf.histogram_summary(name+"_weights", w)
+    tf.histogram_summary(name+"_biases", b)
+    tf.histogram_summary(name+"_activations", act)
+    return tf.nn.max_pool(act, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding="SAME")
+
+
+def fc_layer(input, size_in, size_out, name="fc"):
+  with tf.name_scope(name):
+    flat_input = tf.reshape(input, [-1, size_in])
+    w = tf.Variable(tf.truncated_normal([size_in, size_out], stddev=0.1), name="W")
+    b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="B")
+    act = tf.nn.relu(tf.matmul(flat_input, w) + b)
+    tf.histogram_summary(name+"_weights", w)
+    tf.histogram_summary(name+"_biases", b)
+    tf.histogram_summary(name+"_activations", act)
+    return act
 
 
 # input your path
@@ -58,113 +82,57 @@ image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_
 X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='X')
 Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES], name='Y')
 
-### Graph part
-print "original: ", X
-filter1 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 3, 32], stddev=0.1))
-L1 = tf.nn.conv2d(X, filter1, strides=[1, 1, 1, 1], padding='SAME')
-# print L1
-L1 = tf.nn.relu(L1)
-L1 = tf.nn.max_pool(L1, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-L1=tf.nn.dropout(L1,KEEP_PROB)
-print "after 1-layer: ", L1
+### open session
+sess = tf.Session()
+
+### Graph 
+conv1 = conv_layer(X, 3, 32, name='conv1')
+conv2 = conv_layer(conv1, 32, 64, name='conv2')
+conv3 = conv_layer(conv2, 64, 128, name='conv3')
+conv4 = conv_layer(conv3, 128, 256, name='conv4')
+conv5 = conv_layer(conv4, 256, 512, name='conv5')
+conv6 = conv_layer(conv5, 512, 1024, name='conv6')
+conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
+fc1   = fc_layer(conv7, 2048, 3, name='fc1')
+logits = fc1
 
 
-filter2 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 32, 64], stddev=0.1))
-L2 = tf.nn.conv2d(L1, filter2, strides=[1, 1, 1, 1], padding='SAME')
-# print L2
-L2 = tf.nn.relu(L2)
-L2 = tf.nn.max_pool(L2, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-L2=tf.nn.dropout(L2,KEEP_PROB)
+with tf.name_scope('xent') :
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
+    cost_hist = tf.scalar_summary('cost', cost)
 
-print "after 2-layer: ", L2
+with tf.name_scope('train') :
+    optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
 
+#with tf.name_scope('accuracy') :
+#    tf.reduce_mean(logits-Y)
 
-filter3 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 64, 128], stddev=0.01))
-L3 = tf.nn.conv2d(L2, filter3, strides=[1, 1, 1, 1], padding='SAME')
-# print L3
-L3 = tf.nn.relu(L3)
-L3 = tf.nn.max_pool(L3, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-L3=tf.nn.dropout(L3,KEEP_PROB)
-
-print "after 3-layer: ", L3
+summ  = tf.merge_all_summaries()
+sess.run(tf.initialize_all_variables())
+writer = tf.train.SummaryWriter('/tmp/logs/1')
+writer.add_graph(sess.graph)
 
 
-filter4 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 128, 256], stddev=0.01))
-L4 = tf.nn.conv2d(L3, filter4, strides=[1, 1, 1, 1], padding='SAME')
-# print L4
-L4 = tf.nn.relu(L4)
-L4 = tf.nn.max_pool(L4, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-L4=tf.nn.dropout(L4,KEEP_PROB)
+## RUN
+coord = tf.train.Coordinator()
+threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+for epoch in range(TRAIN_EPOCH):
+    total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
+    for i in range(total_batch):
+        batch_x, batch_y = sess.run([image_batch, label_batch])
+        batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
+        cost_value, _, s = sess.run([cost, optimizer, summ], feed_dict={X: batch_x, Y: batch_y})
 
-print "after 4-layer: ", L4
+	writer.add_summary(s,epoch)
+        
 
-
-filter5 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 256, 512], stddev=0.001))
-L5 = tf.nn.conv2d(L4, filter5, strides=[1, 1, 1, 1], padding='SAME')
-# print L5
-L5 = tf.nn.relu(L5)
-L5 = tf.nn.max_pool(L5, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-L5=tf.nn.dropout(L5,KEEP_PROB)
-
-print "after 5-layer: ", L5
-
-
-filter6 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 512, 1024], stddev=0.001))
-L6 = tf.nn.conv2d(L5, filter6, strides=[1, 1, 1, 1], padding='SAME')
-# print L6
-L6 = tf.nn.relu(L6)
-L6 = tf.nn.max_pool(L6, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-L6=tf.nn.dropout(L6,KEEP_PROB)
-
-print "after 6-layer: ", L6
-
-filter7 = tf.Variable(tf.random_normal([FILTER_SIZE, FILTER_SIZE, 1024, 2048], stddev=0.01))
-L7 = tf.nn.conv2d(L6, filter7, strides=[1, 1, 1, 1], padding='SAME')
-# print L7
-L7 = tf.nn.relu(L7)
-L7 = tf.nn.max_pool(L7, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding='SAME')
-
-print "after 7-layer: ", L7
-
-
-
-print "========================================================================================="
-
-L7 = tf.reshape(L7, [-1, 1*1*2048])
-print "reshape for fully: ", L7
-
-
-flat_W1 = tf.get_variable("flat_W", shape=[1*1*2048, NUM_CLASSES], initializer=tf.contrib.layers.xavier_initializer())
-w1_hist = tf.histogram_summary('W1', flat_W1)
-b1 = tf.Variable(tf.random_normal([NUM_CLASSES]))
-b1_hist = tf.histogram_summary('b1', b1)
-logits = tf.matmul(L7, flat_W1) + b1
-logits_hist = tf.histogram_summary('logit', logits)
-
-
-param_list = [filter1, filter2, filter3, filter4, filter5, filter6, filter7, flat_W1, b1]
-saver = tf.train.Saver(param_list)
-
-
-print "========================================================================================="
-print "logits: ", logits
-print "Y: ", Y
-print "========================================================================================="
-
-
-
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
-cost_hist = tf.scalar_summary('cost', cost)
-optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
-
-merged = tf.merge_all_summaries()
-writer = tf.train.SummaryWriter('/tmp/logs')
-
+'''
 with tf.Session() as sess:
     
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    sess.run(tf.global_variables_initializer())
+    #sess.run(tf.global_variables_initializer())
+    sess.run(tf.initialize_all_variables())
  
     for epoch in range(TRAIN_EPOCH):
         avg_cost = 0
@@ -176,14 +144,14 @@ with tf.Session() as sess:
             
             batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
             
-            summ, cost_value, _ = sess.run([merged, cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
+            cost_value, _ = sess.run([cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
             avg_cost += cost_value / total_batch
 
-	writer.add_summary(summ,epoch)
+	#writer.add_summary(summ,epoch)
 
         print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
 
-        saver.save(sess, 'log/model'+str(epoch)+'.ckpt', global_step=100)
+       # saver.save(sess, 'log/model'+str(epoch)+'.ckpt', global_step=100)
 
 	## TEST ACCURACY
 	test_batch = []
@@ -254,3 +222,8 @@ with tf.Session() as sess:
     coord.request_stop()
     coord.join(threads) 
 
+
+
+if __name__ == '__main__':
+  main()
+'''
