@@ -21,8 +21,8 @@ IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
 TRAIN_EPOCH = 1000
-BATCH_SIZE = 2 #50
-NUM_TOTAL_TRAINING_DATA = 1000 #61578
+BATCH_SIZE = 10 #50
+NUM_TOTAL_TRAINING_DATA = 100 #61578
 NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
@@ -104,12 +104,14 @@ with tf.name_scope('xent') :
 with tf.name_scope('train') :
     optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
 
-#with tf.name_scope('accuracy') :
-#    tf.reduce_mean(logits-Y)
+with tf.name_scope('accuracy') :
+    accuracy = tf.sqrt( tf.reduce_sum(tf.square(tf.sub(logits, Y)), reduction_indices=1))
+    accuracy = tf.reduce_mean(accuracy)
+    acc_hist = tf.scalar_summary('accuracy', accuracy)
 
-summ  = tf.merge_all_summaries()
+summary  = tf.merge_all_summaries()
 sess.run(tf.initialize_all_variables())
-writer = tf.train.SummaryWriter('/tmp/logs/1')
+writer = tf.train.SummaryWriter('/tmp/logs/2')
 writer.add_graph(sess.graph)
 
 
@@ -121,109 +123,16 @@ for epoch in range(TRAIN_EPOCH):
     for i in range(total_batch):
         batch_x, batch_y = sess.run([image_batch, label_batch])
         batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-        cost_value, _, s = sess.run([cost, optimizer, summ], feed_dict={X: batch_x, Y: batch_y})
+        cost_value, _, summ, acc = sess.run([cost, optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
 
-	writer.add_summary(s,epoch)
+    writer.add_summary(summ, epoch)
+    print "epoch : %d" % (epoch) 
         
+coord.request_stop()
+coord.join(threads) 
+
 
 '''
-with tf.Session() as sess:
-    
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    #sess.run(tf.global_variables_initializer())
-    sess.run(tf.initialize_all_variables())
- 
-    for epoch in range(TRAIN_EPOCH):
-        avg_cost = 0
-        total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
-
-        ## TRAINING
-        for i in range(total_batch):
-            batch_x, batch_y = sess.run([image_batch, label_batch])
-            
-            batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-            
-            cost_value, _ = sess.run([cost, optimizer], feed_dict={X: batch_x, Y: batch_y})
-            avg_cost += cost_value / total_batch
-
-	#writer.add_summary(summ,epoch)
-
-        print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
-
-       # saver.save(sess, 'log/model'+str(epoch)+'.ckpt', global_step=100)
-
-	## TEST ACCURACY
-	test_batch = []
-	test_y = []
-	test_path = prepare_data.RESIZE_TRAIN_DATA_PATH
-	test_y_path = prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH
-
-	reader = csv.reader(open(test_y_path), delimiter=',')
-         
-	for row in reader :
-	    file_path = row[0]
-	    img = cv2.imread(file_path)
-	    test_batch.append(img)
-	    test_y.append([float(row[1]), float(row[2]), float(row[3])])
-
-	    if  len(test_y) == 50 : 
-		break;
-
-	input_batch = np.array(test_batch)
-	input_batch = input_batch.reshape(50, IMAGE_WIDTH, IMAGE_HEIGHT, 3)
-	y_batch = np.array(test_y)
-	y_batch = y_batch.reshape(50,3)
-
-	pred = sess.run(logits, feed_dict={X: input_batch})
-
-	pred1 = pred
-	pred1[pred1<0] = 0.0
-	s = np.expand_dims(np.sum(pred1,1)+1e-12,1)
-	pred1 = pred1 / s
-
-	accuracy =  np.average(np.sqrt(np.sum((pred1-y_batch)**2, axis=1)))
-	print('Accuracy : ' ,  accuracy)
-    print('Learning Finished!')
-
-    correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-
-    # 50 images test
-    test_batch = []
-    file_list = []
-    test_path = prepare_data.RESIZE_TRAIN_DATA_PATH
-    for test_file in os.listdir(test_path)[:50]:
-        file_list.append(test_file)
-        img = cv2.imread(test_path+'/'+test_file, cv2.IMREAD_GRAYSCALE)
-        test_batch.append(img)
-
-    input_batch = np.array(test_batch)
-    input_batch = input_batch.reshape(50, IMAGE_WIDTH, IMAGE_HEIGHT, 3)
-
-    pred = sess.run(tf.argmax(logits, 1), feed_dict={X: input_batch})
-    print 'predict : ', pred
-    print file_list
-
-
-    # show prediction using pyplot
-    fig = plt.figure()
-    for i in range(50):
-        y = fig.add_subplot(5, 10, i+1)
-        show_img = input_batch[i, :, :, 0]
-        y.imshow(show_img, cmap='gray')
-	y.set_xticks([])
-	y.set_yticks([])
-        plt.title(pred[i])
-    plt.show()
-
-
-    coord.request_stop()
-    coord.join(threads) 
-
-
-
 if __name__ == '__main__':
   main()
 '''
