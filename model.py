@@ -20,7 +20,7 @@ IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
-TRAIN_EPOCH = 1000
+TRAIN_EPOCH = 10 #1000
 BATCH_SIZE = 10 #50
 NUM_TOTAL_TRAINING_DATA = 100 #61578
 NUM_THREADS = 4
@@ -31,9 +31,9 @@ FILTER_SIZE = 2
 POOLING_SIZE = 2
 
 
-def conv_layer(input, size_in, size_out, name="conv"):
+def conv_layer(input, size_in, size_out, name="conv", stddev=0.01):
   with tf.name_scope(name):
-    w = tf.Variable(tf.truncated_normal([FILTER_SIZE, FILTER_SIZE, size_in, size_out], stddev=0.1), name="W")
+    w = tf.Variable(tf.truncated_normal([FILTER_SIZE, FILTER_SIZE, size_in, size_out], stddev=stddev), name="W")
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="B")
     conv = tf.nn.conv2d(input, w, strides=[1, 1, 1, 1], padding="SAME")
     act = tf.nn.relu(conv + b)
@@ -43,10 +43,10 @@ def conv_layer(input, size_in, size_out, name="conv"):
     return tf.nn.max_pool(act, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding="SAME")
 
 
-def fc_layer(input, size_in, size_out, name="fc"):
+def fc_layer(input, size_in, size_out, name="fc", stddev=0.01):
   with tf.name_scope(name):
     flat_input = tf.reshape(input, [-1, size_in])
-    w = tf.Variable(tf.truncated_normal([size_in, size_out], stddev=0.1), name="W")
+    w = tf.Variable(tf.truncated_normal([size_in, size_out], stddev=stddev), name="W")
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="B")
     act = tf.nn.relu(tf.matmul(flat_input, w) + b)
     tf.summary.histogram(name+"_weights", w)
@@ -98,7 +98,7 @@ def model(learning_rate, hparam) :
     conv6 = conv_layer(conv5, 512, 1024, name='conv6')
     conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
     fc1   = fc_layer(conv7, 2048, 2048, name='fc1')
-    fc2   = fc_layer(conv7, 2048, 3, name='fc1')
+    fc2   = fc_layer(fc1, 2048, 3, name='fc2')
     logits = fc2
 
     with tf.name_scope('xent') :
@@ -130,13 +130,13 @@ def model(learning_rate, hparam) :
 	    cost_value, _, summ, acc = sess.run([cost, optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
 
 	writer.add_summary(summ, epoch)
-	print "epoch : %d" % (epoch) 
+	print "epoch[%d] : %f " % (epoch, acc) 
 	    
     coord.request_stop()
     coord.join(threads) 
 
 def main() :
-    for learning_rate in [1E-2, 1E-3, 1E-4, 1E-4]:
+    for learning_rate in [1E-2, 1E-3, 1E-4, 1E-5]:
 	model(learning_rate, "param_%f" % (learning_rate))
 
 if __name__ == '__main__':
