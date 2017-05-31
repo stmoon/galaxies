@@ -110,8 +110,8 @@ with tf.name_scope('accuracy') :
     acc_hist = tf.scalar_summary('accuracy', accuracy)
 
 summary  = tf.merge_all_summaries()
-sess.run(tf.initialize_all_variables())
-writer = tf.train.SummaryWriter('/tmp/logs/2')
+sess.run(tf.global_variables_initializer())
+writer = tf.train.SummaryWriter('logs/1')
 writer.add_graph(sess.graph)
 
 
