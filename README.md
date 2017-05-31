@@ -4,7 +4,7 @@ classification based on CNN for galaxies
 
 ## version 
 
-this uses tensorflow 0.12.0-rc0
+this uses tensorflow 1.1.0
 
 ## Install
 
