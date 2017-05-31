@@ -75,64 +75,67 @@ image_cast = tf.cast(image_decoded, tf.float32)
 image = tf.reshape(image_cast, [IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
 
-# similary tf.placeholder
-# Training batch set
-image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
+def model(learning_rate, hparam) :
+    # similary tf.placeholder
+    # Training batch set
+    image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
 
-X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='X')
-Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES], name='Y')
+    X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='X')
+    Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES], name='Y')
 
-### open session
-sess = tf.Session()
+    ### open session
+    sess = tf.Session()
 
-### Graph 
-conv1 = conv_layer(X, 3, 32, name='conv1')
-conv2 = conv_layer(conv1, 32, 64, name='conv2')
-conv3 = conv_layer(conv2, 64, 128, name='conv3')
-conv4 = conv_layer(conv3, 128, 256, name='conv4')
-conv5 = conv_layer(conv4, 256, 512, name='conv5')
-conv6 = conv_layer(conv5, 512, 1024, name='conv6')
-conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
-fc1   = fc_layer(conv7, 2048, 3, name='fc1')
-logits = fc1
-
-
-with tf.name_scope('xent') :
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
-    cost_hist = tf.scalar_summary('cost', cost)
-
-with tf.name_scope('train') :
-    optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
-
-with tf.name_scope('accuracy') :
-    accuracy = tf.sqrt( tf.reduce_sum(tf.square(tf.sub(logits, Y)), reduction_indices=1))
-    accuracy = tf.reduce_mean(accuracy)
-    acc_hist = tf.scalar_summary('accuracy', accuracy)
-
-summary  = tf.merge_all_summaries()
-sess.run(tf.global_variables_initializer())
-writer = tf.train.SummaryWriter('logs/1')
-writer.add_graph(sess.graph)
+    ### Graph 
+    conv1 = conv_layer(X, 3, 32, name='conv1')
+    conv2 = conv_layer(conv1, 32, 64, name='conv2')
+    conv3 = conv_layer(conv2, 64, 128, name='conv3')
+    conv4 = conv_layer(conv3, 128, 256, name='conv4')
+    conv5 = conv_layer(conv4, 256, 512, name='conv5')
+    conv6 = conv_layer(conv5, 512, 1024, name='conv6')
+    conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
+    fc1   = fc_layer(conv7, 2048, 3, name='fc1')
+    logits = fc1
 
 
-## RUN
-coord = tf.train.Coordinator()
-threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-for epoch in range(TRAIN_EPOCH):
-    total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
-    for i in range(total_batch):
-        batch_x, batch_y = sess.run([image_batch, label_batch])
-        batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-        cost_value, _, summ, acc = sess.run([cost, optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
+    with tf.name_scope('xent') :
+	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
+	cost_hist = tf.scalar_summary('cost', cost)
 
-    writer.add_summary(summ, epoch)
-    print "epoch : %d" % (epoch) 
-        
-coord.request_stop()
-coord.join(threads) 
+    with tf.name_scope('train') :
+	optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(cost)
+
+    with tf.name_scope('accuracy') :
+	accuracy = tf.sqrt( tf.reduce_sum(tf.square(tf.sub(logits, Y)), reduction_indices=1))
+	accuracy = tf.reduce_mean(accuracy)
+	acc_hist = tf.scalar_summary('accuracy', accuracy)
+
+    summary  = tf.merge_all_summaries()
+    sess.run(tf.global_variables_initializer())
+    writer = tf.train.SummaryWriter('logs/1')
+    writer.add_graph(sess.graph)
 
 
-'''
+    ## RUN
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    for epoch in range(TRAIN_EPOCH):
+	total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
+	for i in range(total_batch):
+	    batch_x, batch_y = sess.run([image_batch, label_batch])
+	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
+	    cost_value, _, summ, acc = sess.run([cost, optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
+
+	writer.add_summary(summ, epoch)
+	print "epoch : %d" % (epoch) 
+	    
+    coord.request_stop()
+    coord.join(threads) 
+
+
+def main() :
+    model(0.1, "AAA")
+
 if __name__ == '__main__':
   main()
-'''
+
