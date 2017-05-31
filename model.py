@@ -55,7 +55,7 @@ def fc_layer(input, size_in, size_out, name="fc", stddev=0.01):
     return act
 
 
-def model(learning_rate, hparam) :
+def model(learning_rate, std_dev, hparam) :
 
     # open session
     tf.reset_default_graph()
@@ -90,27 +90,26 @@ def model(learning_rate, hparam) :
 
 
     ### Graph 
-    conv1 = conv_layer(X, 3, 32, name='conv1')
-    conv2 = conv_layer(conv1, 32, 64, name='conv2')
-    conv3 = conv_layer(conv2, 64, 128, name='conv3')
-    conv4 = conv_layer(conv3, 128, 256, name='conv4')
-    conv5 = conv_layer(conv4, 256, 512, name='conv5')
-    conv6 = conv_layer(conv5, 512, 1024, name='conv6')
-    conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
-    fc1   = fc_layer(conv7, 2048, 2048, name='fc1')
-    fc2   = fc_layer(fc1, 2048, 3, name='fc2')
+    conv1 = conv_layer(X, 3, 32, name='conv1', stddev=std_dev)
+    conv2 = conv_layer(conv1, 32, 64, name='conv2', stddev=std_dev)
+    conv3 = conv_layer(conv2, 64, 128, name='conv3', stddev=std_dev )
+    conv4 = conv_layer(conv3, 128, 256, name='conv4', stddev=std_dev)
+    conv5 = conv_layer(conv4, 256, 512, name='conv5', stddev=std_dev)
+    conv6 = conv_layer(conv5, 512, 1024, name='conv6', stddev=std_dev)
+    conv7 = conv_layer(conv6, 1024, 2048, name='conv7', stddev=std_dev)
+    fc1   = fc_layer(conv7, 2048, 2048, name='fc1', stddev=std_dev)
+    fc2   = fc_layer(fc1, 2048, 3, name='fc2', stddev=std_dev)
     logits = fc2
 
     with tf.name_scope('xent') :
-	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
-	cost_hist = tf.summary.scalar('cost', cost)
-
+	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)) 
+	cost_hist = tf.summary.scalar('cost', cost) 
     with tf.name_scope('train') :
 	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     with tf.name_scope('accuracy') :
-	accuracy = tf.sqrt( tf.reduce_sum(tf.square(tf.subtract(logits, Y)), axis=1))
-	accuracy = tf.reduce_mean(accuracy)
+	accuracy = tf.reduce_mean(tf.square(tf.subtract(logits, Y)), axis=1)
+	accuracy = tf.reduce_mean(tf.sqrt(accuracy))
 	acc_hist = tf.summary.scalar('accuracy', accuracy)
 
     summary  = tf.summary.merge_all()
@@ -137,7 +136,8 @@ def model(learning_rate, hparam) :
 
 def main() :
     for learning_rate in [1E-2, 1E-3, 1E-4, 1E-5]:
-	model(learning_rate, "param_%f" % (learning_rate))
+	for std_dev in [1E-1, 1E-2, 1E-3] :
+	    model(learning_rate, std_dev, "param_%f_%f" % (learning_rate, std_dev))
 
 if __name__ == '__main__':
   main()
