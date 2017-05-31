@@ -20,9 +20,9 @@ IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
-TRAIN_EPOCH = 10 #1000
-BATCH_SIZE = 10 #50
-NUM_TOTAL_TRAINING_DATA = 100 #61578
+TRAIN_EPOCH = 100
+BATCH_SIZE = 50
+NUM_TOTAL_TRAINING_DATA = 1000
 NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
@@ -136,9 +136,8 @@ def model(learning_rate, std_dev, hparam) :
 
 def main() :
     for learning_rate in [1E-2, 1E-3, 1E-4, 1E-5]:
-	for std_dev in [1E-1, 1E-2, 1E-3] :
+	for std_dev in [1E-1, 1E-2, 1E-3,1E-4] :
 	    model(learning_rate, std_dev, "param_%f_%f" % (learning_rate, std_dev))
 
 if __name__ == '__main__':
-  main()
-
+    main()
