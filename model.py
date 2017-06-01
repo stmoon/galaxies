@@ -33,7 +33,8 @@ POOLING_SIZE = 2
 
 def conv_layer(input, size_in, size_out, name="conv", stddev=0.01):
   with tf.name_scope(name):
-    w = tf.Variable(tf.truncated_normal([FILTER_SIZE, FILTER_SIZE, size_in, size_out], stddev=stddev), name="W")
+    w_init = tf.contrib.layers.xavier_initializer_conv2d()
+    w = tf.get_variable(name+"_w", shape=[FILTER_SIZE, FILTER_SIZE, size_in, size_out], initializer=w_init)
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="B")
     conv = tf.nn.conv2d(input, w, strides=[1, 1, 1, 1], padding="SAME")
     act = tf.nn.relu(conv + b)
@@ -46,7 +47,8 @@ def conv_layer(input, size_in, size_out, name="conv", stddev=0.01):
 def fc_layer(input, size_in, size_out, name="fc", stddev=0.01):
   with tf.name_scope(name):
     flat_input = tf.reshape(input, [-1, size_in])
-    w = tf.Variable(tf.truncated_normal([size_in, size_out], stddev=stddev), name="W")
+    w_init = tf.contrib.layers.xavier_initializer();
+    w = tf.get_variable(name+"_w", shape=[size_in, size_out], initializer=w_init)
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="B")
     act = tf.nn.relu(tf.matmul(flat_input, w) + b)
     tf.summary.histogram(name+"_weights", w)
@@ -104,12 +106,18 @@ def model(learning_rate, std_dev, hparam) :
     with tf.name_scope('xent') :
 	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)) 
 	cost_hist = tf.summary.scalar('cost', cost) 
+
     with tf.name_scope('train') :
 	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
+    with tf.name_scope('distance') :
+	dist = tf.reduce_mean(tf.square(tf.subtract(logits, Y)), axis=1)
+	dist = tf.reduce_mean(tf.sqrt(dist))
+	dist_hist = tf.summary.scalar('distance', dist)
+
     with tf.name_scope('accuracy') :
-	accuracy = tf.reduce_mean(tf.square(tf.subtract(logits, Y)), axis=1)
-	accuracy = tf.reduce_mean(tf.sqrt(accuracy))
+	correct_prediction = tf.equal(tf.argmax(logits,1), tf.argmax(Y,1))	
+	accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 	acc_hist = tf.summary.scalar('accuracy', accuracy)
 
     summary  = tf.summary.merge_all()
@@ -126,7 +134,7 @@ def model(learning_rate, std_dev, hparam) :
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([image_batch, label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    cost_value, _, summ, acc = sess.run([cost, optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
+	    cost_value, _, summ, dist1, acc = sess.run([cost, optimizer, summary, dist, accuracy], feed_dict={X: batch_x, Y: batch_y})
 
 	writer.add_summary(summ, epoch)
 	print "epoch[%d] : %f " % (epoch, acc) 
@@ -135,9 +143,8 @@ def model(learning_rate, std_dev, hparam) :
     coord.join(threads) 
 
 def main() :
-    for learning_rate in [1E-2, 1E-3, 1E-4, 1E-5]:
-	for std_dev in [1E-1, 1E-2, 1E-3,1E-4] :
-	    model(learning_rate, std_dev, "param_%f_%f" % (learning_rate, std_dev))
+    for learning_rate in [1.0*1E-4, 4.0*1E-4, 7.0*1E-4]:
+	model(learning_rate, 0.01, "param_%f" % (learning_rate))
 
 if __name__ == '__main__':
     main()
