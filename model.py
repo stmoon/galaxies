@@ -8,6 +8,8 @@ import numpy as np
 import cv2, os
 import prepare_data
 import csv
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 prepare_data.prepre_resize_train()      ## Create Train Data
@@ -20,7 +22,7 @@ IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 LEARNING_RATE = 1e-3
-TRAIN_EPOCH = 100
+TRAIN_EPOCH = 5
 BATCH_SIZE = 50
 NUM_TOTAL_TRAINING_DATA = 1000
 NUM_THREADS = 4
@@ -115,6 +117,7 @@ def model(learning_rate, std_dev, hparam) :
 	dist = tf.reduce_mean(tf.sqrt(dist))
 	dist_hist = tf.summary.scalar('distance', dist)
 
+
     with tf.name_scope('accuracy') :
 	correct_prediction = tf.equal(tf.argmax(logits,1), tf.argmax(Y,1))	
 	accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -138,12 +141,13 @@ def model(learning_rate, std_dev, hparam) :
 
 	writer.add_summary(summ, epoch)
 	print "epoch[%d] : %f " % (epoch, acc) 
+        
 	    
     coord.request_stop()
     coord.join(threads) 
 
 def main() :
-    for learning_rate in [1.0*1E-4, 4.0*1E-4, 7.0*1E-4]:
+    for learning_rate in [ 4.0*1E-4] :
 	model(learning_rate, 0.01, "param_%f" % (learning_rate))
 
 if __name__ == '__main__':
