@@ -35,12 +35,9 @@ POOLING_SIZE = 2
 def conv_layer(input, size_in, size_out, name="conv"):
   with tf.name_scope(name):
     w_init = tf.contrib.layers.variance_scaling_initializer()
-    #w_init = tf.contrib.layers.xavier_initializer_conv2d()
     w = tf.get_variable(name+"_w", shape=[FILTER_SIZE, FILTER_SIZE, size_in, size_out], initializer=w_init)
-    #b = tf.get_variable(name+"_b", shape=[size_out], initializer=tf.constant_initializer(0.1))
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="b")
     conv = tf.nn.conv2d(input, w, strides=[1, 1, 1, 1], padding="SAME")
-    #act = tf.nn.relu(conv + b)
     h1 = conv + b
     h2 = tf.contrib.layers.batch_norm(h1, center=True, scale=True, is_training=True, scope=name)
     act = tf.nn.relu(h2, 'relu')
@@ -54,12 +51,9 @@ def fc_layer(input, size_in, size_out, is_relu=True, name="fc"):
   with tf.name_scope(name):
     flat_input = tf.reshape(input, [-1, size_in])
     w_init = tf.contrib.layers.variance_scaling_initializer()
-    #w_init = tf.contrib.layers.xavier_initializer_conv2d()
     w = tf.get_variable(name+"_w", shape=[size_in, size_out], initializer=w_init)
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="b")
     h1  = tf.matmul(flat_input, w) + b
-    #act = tf.nn.relu(tf.matmul(flat_input, w) + b)
-    #h1 = tf.contrib.layers.fully_connected(input, size_out, activation_fn=None, scope=name)
     h2 = tf.contrib.layers.batch_norm(h1, center=True, scale=True, is_training=True, scope=name)
     if is_relu :
 	act = tf.nn.relu(h2, 'relu')
