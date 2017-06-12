@@ -21,13 +21,14 @@ prepare_data.prepare_csv()
 IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
-TRAIN_EPOCH = 500
-BATCH_SIZE = 50
-NUM_TOTAL_TRAINING_DATA = 61578
+TRAIN_EPOCH = 5 #500
+BATCH_SIZE = 10 #50
+NUM_TOTAL_TRAINING_DATA = 1000 #61578
+NUM_TOTAL_VALID_DATA = 1000
 NUM_THREADS = 2
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
-NUM_CLASSES = 3
+NUM_CLASSES = 37
 FILTER_SIZE = 3
 POOLING_SIZE = 2
 
@@ -64,15 +65,23 @@ def fc_layer(input, size_in, size_out, is_relu=True, name="fc"):
     tf.summary.histogram("activations", act)
     return act
 
+def decision_tree(input, name='dt') :
 
-def model(learning_rate, hparam) :
+    level1 = input[0:3]
+    out_l1 = tf.nn.softmax(level1, name=None)
 
-    # open session
-    tf.reset_default_graph()
-    sess = tf.Session()
+    #level2 = input[3:~]
+    #out_l2 = tf.nn.softmax(level2, name=None) * input[~]
 
-    # input your path
-    csv_file =  tf.train.string_input_producer([prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH], name='filename_queue', shuffle=True)       
+
+    #act = out_l1 + outl2 + ... 
+
+    #return act
+    return tf.nn.softmax(input, name=None)
+
+def prepare_input(path='') :
+     # input your path
+    csv_file =  tf.train.string_input_producer([path], name='filename_queue', shuffle=True)       
     csv_reader = tf.TextLineReader()
     _,line = csv_reader.read(csv_file)
 
@@ -86,14 +95,29 @@ def model(learning_rate, hparam) :
     image_cast = tf.cast(image_decoded, tf.float32)
     image = tf.reshape(image_cast, [IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
+    return image, label_decoded
+
+
+def model(learning_rate, hparam) :
+
+    # open session
+    tf.reset_default_graph()
+    sess = tf.Session()
+
+    # prepare input
+    image, label_decoded = prepare_input(prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH)
+
+    valid_image, valid_label_decoded = prepare_input(prepare_data.MODIFIED_TEST_LABEL_CSV_PATH)
 
     # similary tf.placeholder
     # Training batch set
     image_batch, label_batch = tf.train.shuffle_batch([image, label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
 
+
+    valid_image_batch, valid_label_batch = tf.train.shuffle_batch([valid_image, valid_label_decoded], batch_size=BATCH_SIZE, num_threads=NUM_THREADS, capacity=CAPACITY, min_after_dequeue=MIN_AFTER_DEQUEUE)
+
     X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='X')
     Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES], name='Y')
-
 
     ### Graph 
     conv1 = conv_layer(X, 3, 32, name='conv1')
@@ -105,7 +129,9 @@ def model(learning_rate, hparam) :
     conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
     fc1   = fc_layer(conv7, 2048, 2048, name='fc1')
     fc2   = fc_layer(fc1, 2048, NUM_CLASSES, is_relu=False, name='fc2')
-    logits = tf.nn.softmax(fc2, name=None)
+
+    logits = decision_tree(fc2, name='dt')
+    #logits = tf.nn.softmax(fc2, name=None)
 
     with tf.name_scope('train') :
 	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)) 
@@ -114,35 +140,46 @@ def model(learning_rate, hparam) :
 
     with tf.name_scope('distance') :
 	dist = tf.reduce_mean(tf.square(tf.subtract(logits, Y)), axis=1)
-	dist = tf.reduce_mean(tf.sqrt(dist))
-	dist_hist = tf.summary.scalar('distance', dist)
-
+	dist_train = tf.reduce_mean(tf.sqrt(dist))
+	dist_train_hist = tf.summary.scalar('dist_train', dist_train)
+	dist_valid = tf.reduce_mean(tf.sqrt(dist))
+	dist_valid_hist = tf.summary.scalar('dist_valid', dist_valid)
 
     with tf.name_scope('accuracy') :
 	correct_prediction = tf.equal(tf.argmax(logits,1), tf.argmax(Y,1))	
 	accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-	acc_hist = tf.summary.scalar('accuracy', accuracy)
-
+	acc_hist = tf.summary.scalar('acc_train', accuracy)
+	
     summary  = tf.summary.merge_all()
     sess.run(tf.global_variables_initializer())
     writer = tf.summary.FileWriter('logs/'+hparam)
     writer.add_graph(sess.graph)
 
 
-    ## RUN
+    ## TRAINING
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     for epoch in range(TRAIN_EPOCH):
+	
+	## TRAINING
 	total_batch = int(NUM_TOTAL_TRAINING_DATA/BATCH_SIZE)
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([image_batch, label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    opt, summ, acc = sess.run([optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
+	    opt, summ, acc_train = sess.run([optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
+
+	## VALIDATION
+	total_batch = int(NUM_TOTAL_VALID_DATA/BATCH_SIZE) 
+	for i in range(total_batch):
+	    batch_x, batch_y = sess.run([valid_image_batch, valid_label_batch])
+	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
+	    acc_valid = sess.run([accuracy], feed_dict={X: batch_x, Y: batch_y})
 
 	writer.add_summary(summ, epoch)
-	print "epoch[%d]: acc(%f) " % (epoch, acc) 
+	print "epoch[%d]: acc(%f,%f) " % (epoch, acc_train, acc_valid) 
 
-       
+    ## TEST
+    run_test()   
 	    
     coord.request_stop()
     coord.join(threads) 
