@@ -2,11 +2,11 @@
 
 ## Introduction
 
-본 연구는 Kaggle의 은하계 사진의 Decision Tree 형태의 정보를 바탕으로 Regression이 잘 되는지를 확인하는 것을 목적으로 한다. **그 중 이 문서는 이 문제를 해결하기 위해 CNN을 사용하였고, Decision Tree 중 첫번째 트리에 대해서만 Regression 예측을 수행한 결과를 바탕으로 CNN이 정상동작됨을 보이고, 그 모델에 대한 구조를 설명한다.**
+본 연구는 Kaggle의 SDSS 외부은하 사진의 type 분류를 위한 citizeon science(galaxy zoo)를 결과를 중심으로 Decision Tree의 각 leaf의 answer 확률 유추에 Regression이 잘 되는지를 확인하는 것을 목적으로 한다. **그 중 이 문서는 이 문제를 해결하기 위해 CNN을 사용하였고, Decision Tree 중 첫번째 트리에 대해서만 Regression 예측을 수행한 결과를 바탕으로 CNN이 정상동작됨을 보이고, 그 모델에 대한 구조를 설명한다.**
 
 - TensorFlow 1.1을 기반으로 개발하였음
 - TensorBoard를 통해 각 변수들의 상태를 실시간으로 확인하였음
-
+에
 ## Model
 
 전체적인 모델은 다음과 같다. CNN을 기반으로 개발하였고, Fully Convolutional Network을 기본으로 하여 모델을 개발하였다.
