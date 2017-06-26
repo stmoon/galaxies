@@ -14,23 +14,18 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 prepare_data.prepare_image()
 
-#prepare_data.prepre_resize_train()      ## Create Train Data
-#prepare_data.prepare_resize_test()      ## Create Train Data
-#prepare_data.prepare_csv()
-
-
 ### Hyper parameter
 IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
-TRAIN_EPOCH = 5 #500
+TRAIN_EPOCH = 10 #500
 BATCH_SIZE = 50
-NUM_TOTAL_TRAINING_DATA = 1000 #61578
-NUM_TOTAL_VALID_DATA = 1000
+NUM_TOTAL_TRAINING_DATA = 61578
+NUM_TOTAL_VALID_DATA = 100
 NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
-NUM_CLASSES = 37
+NUM_CLASSES = 3
 FILTER_SIZE = 3
 POOLING_SIZE = 2
 
@@ -154,7 +149,6 @@ def model(learning_rate, hparam) :
 	acc_valid = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 	acc_valid_hist = tf.summary.scalar('acc_valid', acc_valid)
 	
-    #summary  = tf.summary.merge_all()
     sess.run(tf.global_variables_initializer())
     writer = tf.summary.FileWriter('logs/'+hparam)
     writer.add_graph(sess.graph)
