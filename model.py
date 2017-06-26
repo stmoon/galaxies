@@ -12,9 +12,11 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-prepare_data.prepre_resize_train()      ## Create Train Data
-prepare_data.prepare_resize_test()      ## Create Train Data
-prepare_data.prepare_csv()
+prepare_data.prepare_image()
+
+#prepare_data.prepre_resize_train()      ## Create Train Data
+#prepare_data.prepare_resize_test()      ## Create Train Data
+#prepare_data.prepare_csv()
 
 
 ### Hyper parameter
@@ -22,10 +24,10 @@ IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 TRAIN_EPOCH = 5 #500
-BATCH_SIZE = 10 #50
+BATCH_SIZE = 50
 NUM_TOTAL_TRAINING_DATA = 1000 #61578
 NUM_TOTAL_VALID_DATA = 1000
-NUM_THREADS = 2
+NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
 NUM_CLASSES = 37
@@ -105,9 +107,9 @@ def model(learning_rate, hparam) :
     sess = tf.Session()
 
     # prepare input
-    image, label_decoded = prepare_input(prepare_data.MODIFIED_TRAIN_LABEL_CSV_PATH)
+    image, label_decoded = prepare_input(prepare_data.MODIFIED_TRAIN_LABEL_CSV_FILE)
 
-    valid_image, valid_label_decoded = prepare_input(prepare_data.MODIFIED_TEST_LABEL_CSV_PATH)
+    valid_image, valid_label_decoded = prepare_input(prepare_data.MODIFIED_VALID_LABEL_CSV_FILE)
 
     # similary tf.placeholder
     # Training batch set
@@ -147,16 +149,17 @@ def model(learning_rate, hparam) :
 
     with tf.name_scope('accuracy') :
 	correct_prediction = tf.equal(tf.argmax(logits,1), tf.argmax(Y,1))	
-	accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-	acc_hist = tf.summary.scalar('acc_train', accuracy)
+	acc_train = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+	acc_train_hist = tf.summary.scalar('acc_train', acc_train)
+	acc_valid = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+	acc_valid_hist = tf.summary.scalar('acc_valid', acc_valid)
 	
-    summary  = tf.summary.merge_all()
+    #summary  = tf.summary.merge_all()
     sess.run(tf.global_variables_initializer())
     writer = tf.summary.FileWriter('logs/'+hparam)
     writer.add_graph(sess.graph)
 
 
-    ## TRAINING
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     for epoch in range(TRAIN_EPOCH):
@@ -166,20 +169,30 @@ def model(learning_rate, hparam) :
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([image_batch, label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    opt, summ, acc_train = sess.run([optimizer, summary, accuracy], feed_dict={X: batch_x, Y: batch_y})
+	    opt, acc_train_ = sess.run([optimizer, acc_train], feed_dict={X: batch_x, Y: batch_y})
+	    cost_h, dist_train_h, acc_train_h = sess.run([cost_hist, dist_train_hist, acc_train_hist], feed_dict={X: batch_x, Y: batch_y} )
+
+	writer.add_summary(cost_h, epoch)
+	writer.add_summary(dist_train_h, epoch)
+	writer.add_summary(acc_train_h, epoch)
 
 	## VALIDATION
 	total_batch = int(NUM_TOTAL_VALID_DATA/BATCH_SIZE) 
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([valid_image_batch, valid_label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    acc_valid = sess.run([accuracy], feed_dict={X: batch_x, Y: batch_y})
+	    acc_valid_ = sess.run(acc_valid, feed_dict={X: batch_x, Y: batch_y})
+	    dist_valid_h, acc_valid_h = sess.run([dist_valid_hist, acc_valid_hist], feed_dict={X: batch_x, Y: batch_y} )
 
-	writer.add_summary(summ, epoch)
-	print "epoch[%d]: acc(%f,%f) " % (epoch, acc_train, acc_valid) 
+	writer.add_summary(dist_valid_h, epoch)
+	writer.add_summary(acc_valid_h, epoch)
+
+
+	#writer.add_summary(summ, epoch)
+	print "epoch[%d]: acc(%f,%f) " % (epoch, acc_train_, acc_valid_) 
 
     ## TEST
-    run_test()   
+    #run_test()   
 	    
     coord.request_stop()
     coord.join(threads) 
