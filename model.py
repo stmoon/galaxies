@@ -30,14 +30,14 @@ FILTER_SIZE = 3
 POOLING_SIZE = 2
 
 
-def conv_layer(input, size_in, size_out, name="conv"):
+def conv_layer(input, size_in, size_out, training=True, name="conv"):
   with tf.name_scope(name):
     w_init = tf.contrib.layers.variance_scaling_initializer()
     w = tf.get_variable(name+"_w", shape=[FILTER_SIZE, FILTER_SIZE, size_in, size_out], initializer=w_init)
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="b")
     conv = tf.nn.conv2d(input, w, strides=[1, 1, 1, 1], padding="SAME")
     h1 = conv + b
-    h2 = tf.contrib.layers.batch_norm(h1, center=True, scale=True, is_training=True, scope=name)
+    h2 = tf.contrib.layers.batch_norm(h1, center=True, scale=True, is_training=training, scope=name)
     act = tf.nn.relu(h2, 'relu')
     tf.summary.histogram("weights", w)
     tf.summary.histogram("biases", b)
@@ -45,14 +45,14 @@ def conv_layer(input, size_in, size_out, name="conv"):
     return tf.nn.max_pool(act, ksize=[1, POOLING_SIZE, POOLING_SIZE, 1], strides=[1, 2, 2, 1], padding="SAME")
 
 
-def fc_layer(input, size_in, size_out, is_relu=True, name="fc"):
+def fc_layer(input, size_in, size_out, is_relu=True, training=True, name="fc"):
   with tf.name_scope(name):
     flat_input = tf.reshape(input, [-1, size_in])
     w_init = tf.contrib.layers.variance_scaling_initializer()
     w = tf.get_variable(name+"_w", shape=[size_in, size_out], initializer=w_init)
     b = tf.Variable(tf.constant(0.1, shape=[size_out]), name="b")
     h1  = tf.matmul(flat_input, w) + b
-    h2 = tf.contrib.layers.batch_norm(h1, center=True, scale=True, is_training=True, scope=name)
+    h2 = tf.contrib.layers.batch_norm(h1, center=True, scale=True, is_training=training, scope=name)
     if is_relu :
 	act = tf.nn.relu(h2, 'relu')
     else :
@@ -115,22 +115,24 @@ def model(learning_rate, hparam) :
 
     X = tf.placeholder(tf.float32, [BATCH_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='X')
     Y = tf.placeholder(tf.float32, [BATCH_SIZE, NUM_CLASSES], name='Y')
+    is_training = tf.placeholder(tf.bool, name='is_training')
 
     ### Graph 
-    conv1 = conv_layer(X, 3, 32, name='conv1')
-    conv2 = conv_layer(conv1, 32, 64, name='conv2')
-    conv3 = conv_layer(conv2, 64, 128, name='conv3')
-    conv4 = conv_layer(conv3, 128, 256, name='conv4')
-    conv5 = conv_layer(conv4, 256, 512, name='conv5')
-    conv6 = conv_layer(conv5, 512, 1024, name='conv6')
-    conv7 = conv_layer(conv6, 1024, 2048, name='conv7')
-    fc1   = fc_layer(conv7, 2048, 2048, name='fc1')
-    fc2   = fc_layer(fc1, 2048, NUM_CLASSES, is_relu=False, name='fc2')
+    conv1 = conv_layer(X, 3, 32, training = is_training, name='conv1')
+    conv2 = conv_layer(conv1, 32, 64, training = is_training, name='conv2')
+    conv3 = conv_layer(conv2, 64, 128, training = is_training, name='conv3')
+    conv4 = conv_layer(conv3, 128, 256, training = is_training, name='conv4')
+    conv5 = conv_layer(conv4, 256, 512, training = is_training, name='conv5')
+    conv6 = conv_layer(conv5, 512, 1024, training = is_training, name='conv6')
+    conv7 = conv_layer(conv6, 1024, 2048, training = is_training, name='conv7')
+    fc1   = fc_layer(conv7, 2048, 2048, training = is_training, name='fc1')
+    fc2   = fc_layer(fc1, 2048, NUM_CLASSES, is_relu=False, training = is_training, name='fc2')
 
     logits = decision_tree(fc2, name='dt')
     #logits = tf.nn.softmax(fc2, name=None)
 
-    with tf.name_scope('train') :
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops), tf.name_scope('train') :
 	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y)) 
 	cost_hist = tf.summary.scalar('cost', cost) 
 	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
@@ -163,8 +165,10 @@ def model(learning_rate, hparam) :
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([image_batch, label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    opt, acc_train_ = sess.run([optimizer, acc_train], feed_dict={X: batch_x, Y: batch_y})
-	    cost_h, dist_train_h, acc_train_h = sess.run([cost_hist, dist_train_hist, acc_train_hist], feed_dict={X: batch_x, Y: batch_y} )
+	    opt, acc_train_ = sess.run([optimizer, acc_train], 
+		feed_dict={X: batch_x, Y: batch_y, is_training: True})
+	    cost_h, dist_train_h, acc_train_h = sess.run([cost_hist, dist_train_hist, acc_train_hist], 
+		feed_dict={X: batch_x, Y: batch_y, is_training: True})
 
 	writer.add_summary(cost_h, epoch)
 	writer.add_summary(dist_train_h, epoch)
@@ -175,8 +179,10 @@ def model(learning_rate, hparam) :
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([valid_image_batch, valid_label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    acc_valid_ = sess.run(acc_valid, feed_dict={X: batch_x, Y: batch_y})
-	    dist_valid_h, acc_valid_h = sess.run([dist_valid_hist, acc_valid_hist], feed_dict={X: batch_x, Y: batch_y} )
+	    acc_valid_ = sess.run(acc_valid, 
+		feed_dict={X: batch_x, Y: batch_y, is_training: True})
+	    dist_valid_h, acc_valid_h = sess.run([dist_valid_hist, acc_valid_hist], 
+		feed_dict={X: batch_x, Y: batch_y, is_training: True})
 
 	writer.add_summary(dist_valid_h, epoch)
 	writer.add_summary(acc_valid_h, epoch)
