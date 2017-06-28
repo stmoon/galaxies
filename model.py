@@ -9,6 +9,7 @@ import cv2, os
 import prepare_data
 import csv
 import os
+import time
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
@@ -20,15 +21,14 @@ IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
 TRAIN_EPOCH = 10 #500
 BATCH_SIZE = 50
-NUM_TOTAL_TRAINING_DATA = 61578
+NUM_TOTAL_TRAINING_DATA = 1000 #61578
 NUM_TOTAL_VALID_DATA = 100
 NUM_THREADS = 4
 CAPACITY = 50000
 MIN_AFTER_DEQUEUE = 100
-NUM_CLASSES = 3
+NUM_CLASSES = 37
 FILTER_SIZE = 3
 POOLING_SIZE = 2
-
 
 def conv_layer(input, size_in, size_out, training=True, name="conv"):
   with tf.name_scope(name):
@@ -64,17 +64,45 @@ def fc_layer(input, size_in, size_out, is_relu=True, training=True, name="fc"):
 
 def decision_tree(input, name='dt') :
 
-    level1 = input[0:3]
-    out_l1 = tf.nn.softmax(level1, name=None)
+    row = tf.shape(input)[0]
 
-    #level2 = input[3:~]
-    #out_l2 = tf.nn.softmax(level2, name=None) * input[~]
+    out_l1 = input[:,0:3]  
+    res1 = tf.nn.softmax( out_l1, name='q1')
+   
+    out_l2 = tf.nn.softmax(input[:,3:5], name='q2') 
+    res2 = tf.multiply(out_l2, tf.reshape(res1[:,1],(row,1)))
+   
+    out_l3 = tf.nn.softmax(input[:,5:7], name='q3') 
+    res3 = tf.multiply(out_l3, tf.reshape(res2[:,1],(row,1)))
+   
+    out_l4 = tf.nn.softmax(input[:,7:9], name='q4')
+    res4 = tf.multiply(out_l4,tf.reshape(res2[:,1], (row,1)))
+  
+    out_l5 = tf.nn.softmax(input[:,9:13], name='q5') 
+    res5 = tf.multiply(out_l5,tf.reshape(res2[:,1], (row,1)))
 
+    out_l6 = input[:,13:15]   
+    res6 = tf.nn.softmax(out_l6, name='q6') 
+     
+    out_l7 = tf.nn.softmax(input[:,15:18], name='q7') 
+    res7 = tf.multiply(out_l7,tf.reshape(res1[:,0], (row,1)))
+   
+    out_l8 = tf.nn.softmax(input[:,18:25], name='q8')
+    res8 = tf.multiply(out_l8,tf.reshape(res6[:,0], (row,1)))
+   
+    out_l9 = tf.nn.softmax(input[:,25:28], name='q9')
+    res9 = tf.multiply(out_l9,tf.reshape(res2[:,0], (row,1)))
+  
+  
+    out_l10 = tf.nn.softmax(input[:,28:31], name='q10') 
+    res10 = tf.multiply(out_l10,tf.reshape(res4[:,0], (row,1)))
+ 
+    out_l11 = tf.nn.softmax(input[:,31:37], name='q11') 
+    res11 = tf.multiply(out_l11,tf.reshape(res4[:,0], (row,1)))
 
-    #act = out_l1 + outl2 + ... 
-
-    #return act
-    return tf.nn.softmax(input, name=None)
+    res=tf.concat([res1,res2,res3,res4,res5,res6,res7,res8,res9,res10,res11],1)
+    
+    return res
 
 def prepare_input(path='') :
      # input your path
@@ -128,8 +156,10 @@ def model(learning_rate, hparam) :
     fc1   = fc_layer(conv7, 2048, 2048, training = is_training, name='fc1')
     fc2   = fc_layer(fc1, 2048, NUM_CLASSES, is_relu=False, training = is_training, name='fc2')
 
-    logits = decision_tree(fc2, name='dt')
-    #logits = tf.nn.softmax(fc2, name=None)
+
+    with tf.name_scope('decision_tree') :
+        logits = decision_tree(fc2, name='dt')
+	#logits = tf.nn.softmax(fc2, name=None)
 
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops), tf.name_scope('train') :
@@ -200,7 +230,8 @@ def model(learning_rate, hparam) :
 def main() :
     count = 0
     for learning_rate in [ 1.0*1E-5  ] :
-	model(learning_rate, "param%d_%f" % (count, learning_rate))
+	strtime = time.strftime('%y%m%d_%H%M')
+	model(learning_rate, "log_%s_%f_%d" % (strtime, learning_rate, count))
 	count += 1
 
 if __name__ == '__main__':
