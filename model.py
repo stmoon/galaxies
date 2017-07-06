@@ -20,7 +20,7 @@ prepare_data.prepare_image()
 IMAGE_WIDTH =  128
 IMAGE_HEIGHT = 128
 KEEP_PROB = 0.7
-TRAIN_EPOCH = 300 #500
+TRAIN_EPOCH = 500 #500
 BATCH_SIZE = 50
 NUM_TOTAL_TRAINING_DATA = 61578
 NUM_TOTAL_VALID_DATA = 100
@@ -101,7 +101,8 @@ def dt_for_test(input, name='dt') :
    
     out_l2 = tf.nn.softmax(input[:,3:5], name='q2') 
     res2 = tf.multiply(out_l2, tf.reshape(res1[:,1],(row,1)))
-   
+    
+  
     out_l3 = tf.nn.softmax(input[:,5:7], name='q3') 
     res3 = tf.multiply(out_l3, tf.reshape(res2[:,1],(row,1)))
    
@@ -156,10 +157,10 @@ def y_prime(y) :
 
     epsilon = 1e-4
     row = y.shape[0]
-    y_prime = copy.deepcopy(y)
+    y_prime = np.zeros(y.shape)
 
     # Q1
-    y_prime[:,0:3] = y[:,0:3] 
+    y_prime[:,0:3] = y[:,0:3]
 
     # Q2
     div = y[:,1].reshape(row,1)
@@ -238,7 +239,13 @@ def y_prime(y) :
     y_prime[check_zero,31:37] = 0.0
 
     return y_prime
-      
+
+def check_dist(data, name) :
+    dist = tf.reduce_mean(tf.sqrt(data))
+    dist_hist = tf.summary.scalar(name, dist)
+
+    return dist_hist
+
 def model(learning_rate, hparam) :
 
     # open session
@@ -277,7 +284,7 @@ def model(learning_rate, hparam) :
     with tf.name_scope('decision_tree') :
         logits = decision_tree(fc2, name='dt')
 	logits_for_test = dt_for_test(fc2, name='dt')
-	#logits = tf.nn.softmax(fc2, name=None)
+      	#logits = tf.nn.softmax(fc2, name=None)
 
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops), tf.name_scope('train') :
@@ -286,11 +293,25 @@ def model(learning_rate, hparam) :
 	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     with tf.name_scope('distance') :
-	dist = tf.reduce_mean(tf.square(tf.subtract(logits_for_test, Y)), axis=1)
+	dist = tf.reduce_mean(tf.square(tf.subtract(logits_for_test, Y)), axis=0)
 	dist_train = tf.reduce_mean(tf.sqrt(dist))
 	dist_train_hist = tf.summary.scalar('dist_train', dist_train)
 	dist_valid = tf.reduce_mean(tf.sqrt(dist))
 	dist_valid_hist = tf.summary.scalar('dist_valid', dist_valid)
+
+	dist_q1_hist = check_dist(dist[0:3], 'dist_q1')
+	dist_q2_hist = check_dist(dist[3:5], 'dist_q2')
+        dist_q3_hist = check_dist(dist[5:7], 'dist_q3')
+        dist_q4_hist = check_dist(dist[7:9], 'dist_q4')
+        dist_q5_hist = check_dist(dist[9:13], 'dist_q5')
+        dist_q6_hist = check_dist(dist[13:15], 'dist_q6')
+        dist_q7_hist = check_dist(dist[15:18], 'dist_q7')
+        dist_q8_hist = check_dist(dist[18:25], 'dist_q8')
+        dist_q9_hist = check_dist(dist[25:28], 'dist_q9')
+        dist_q10_hist = check_dist(dist[28:31], 'dist_q10')
+        dist_q11_hist = check_dist(dist[31:37], 'dist_q11')
+
+
 
     with tf.name_scope('accuracy') :
 	correct_prediction = tf.equal(tf.argmax(logits_for_test,1), tf.argmax(Y,1))	
@@ -313,22 +334,30 @@ def model(learning_rate, hparam) :
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([image_batch, label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    batch_y_prime = y_prime(batch_y)
+	    batch_y_prime = y_prime(batch_y.copy())
 	    opt, acc_train_ = sess.run([optimizer, acc_train], 
 		feed_dict={X: batch_x, Y: batch_y, Y_prime : batch_y_prime, is_training: True})
 	    cost_h, dist_train_h, acc_train_h = sess.run([cost_hist, dist_train_hist, acc_train_hist], 
 		feed_dict={X: batch_x, Y: batch_y, Y_prime : batch_y_prime, is_training: True})
 
+	    dist_node_h = sess.run(
+		[dist_q1_hist, dist_q2_hist,dist_q3_hist,dist_q4_hist,dist_q5_hist,
+		 dist_q6_hist,dist_q7_hist,dist_q8_hist ,dist_q9_hist,dist_q10_hist,dist_q11_hist],
+		feed_dict={X: batch_x, Y: batch_y, Y_prime : batch_y_prime, is_training: True})
+
 	writer.add_summary(cost_h, epoch)
 	writer.add_summary(dist_train_h, epoch)
 	writer.add_summary(acc_train_h, epoch)
+	for i in range(len(dist_node_h)) :
+	    writer.add_summary(dist_node_h[i], epoch)
+	
 
 	## VALIDATION
 	total_batch = int(NUM_TOTAL_VALID_DATA/BATCH_SIZE) 
 	for i in range(total_batch):
 	    batch_x, batch_y = sess.run([valid_image_batch, valid_label_batch])
 	    batch_y = batch_y.reshape(BATCH_SIZE, NUM_CLASSES)
-	    batch_y_prime = y_prime(batch_y)
+	    batch_y_prime = y_prime(batch_y.copy())
 	    acc_valid_ = sess.run(acc_valid, 
 		feed_dict={X: batch_x, Y: batch_y, Y_prime : batch_y_prime, is_training: True})
 	    dist_valid_h, acc_valid_h = sess.run([dist_valid_hist, acc_valid_hist], 
@@ -349,7 +378,7 @@ def model(learning_rate, hparam) :
 
 def main() :
     count = 0
-    for learning_rate in [ 1.0*1E-5  ] :
+    for learning_rate in [5.0*1E-6, 1.0*1E-6  ] :
 	strtime = time.strftime('%y%m%d_%H%M')
 	model(learning_rate, "log_%s_%f_%d" % (strtime, learning_rate, count))
 	count += 1
